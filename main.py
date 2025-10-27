@@ -20,16 +20,22 @@ FILTER_ID = os.getenv("JIRA_FILTER_ID")
 def main():
     print("Everything OK!")
 
+    # test_llm_client()
+
     # Leer filtro según el código pre definido
     filter = os.getenv("JIRA_FILTER_ID")
 
     # Buscar información de los issues del filtro
     issues_info = get_issue_list_info(filter)
 
-    # Buscar la información de negocio relevante
-    # info = get_business_info()
+    # Usar la información de los issues para obtener detalles de cada caso
+    for issue in issues_info:
+        # Obtener el valor del issue cerrado
+        valor = obtain_value_for_issue(issue)
 
-    # test_llm_client()
+        # Guardar el valor por HU
+        save_issue_value(issue.key, valor)
+
 
     create_output_table(issues_info)
 
@@ -39,7 +45,7 @@ def main():
 
     #     guardar_valor_por_hu(issue.key, valor)
 
-    # print("Success!!")
+    print("Success!!")
 
 
 def get_issue_list_info(filter) -> List[IssueInfo]:
@@ -88,19 +94,21 @@ def test_llm_client():
     print(response)
 
 
-def obtener_valor_para_una_hu(issue: IssueInfo, info: str) -> str:
+def obtain_value_for_issue(issue: IssueInfo) -> str:
     '''
     Método para obtener el valor de una HU específica
     '''
 
-    print(f"\nObteniendo valor de negocio para la HU {issue.key}...")
+    print(f"\nObteniendo valor de negocio para la HU {issue.key}, de GOBI {issue.epic_key}...")
 
     # Crear el cliente de LLM
     llm_client = LLMClient()
 
+    # Obtener información para el prompt
     key = issue.key
     summary = issue.summary
     description = issue.description
+    info = issue.business_info
 
     # Crear prompt que ponga en contexto el modelo
     prompt = f"""
@@ -125,10 +133,13 @@ def obtener_valor_para_una_hu(issue: IssueInfo, info: str) -> str:
     return response
 
 
-def guardar_valor_por_hu(issue_key: str, valor: str) -> None:
+def save_issue_value(issue_key: str, valor: str) -> None:
     '''
     Método para guardar el valor de negocio de una HU en un archivo de texto
     '''
+
+    print(f"\nGuardando valor de negocio para la HU {issue_key}...")
+
     # Crear el gestor de salida
     output_manager = OutputManager()
 

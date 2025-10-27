@@ -1,0 +1,84 @@
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+class BusinessInfo:
+    _business_info_files: dict = {}
+    _info_folder: str
+
+    def __new__(cls):
+        if not hasattr(cls, 'instance'):
+            cls.instance = super(BusinessInfo, cls).__new__(cls)
+            cls.instance._init_business_info()
+        return cls.instance
+    
+    def _init_business_info(self):
+        self._info_folder = os.getenv("BUSINESS_INFO_FOLDER", "sources")
+
+        print(f"Información del negocio para obtener desde: {self._info_folder}")
+
+
+    def get_business_info(self, filename: str) -> str:
+        '''
+        Método para obtener información del negocio desde un archivo
+        '''
+        
+        if not filename.endswith(".txt"):
+            filename += ".txt"
+
+        if filename not in self._business_info_files:
+            file_path = os.path.join(self._info_folder, filename)
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    self._business_info_files[filename] = content
+                    print(f"Información del negocio cargada desde {file_path}")
+            
+            except FileNotFoundError:
+                print(f"Archivo no encontrado: {file_path}")
+                self._business_info_files[filename] = ""
+        
+        return self._business_info_files[filename]
+
+
+    def get_business_info_legacy(self) -> str:
+        '''
+        Método para obtener información del negocio
+        '''
+
+        info = """
+        Principales objetivos de la iniciativa Cuota Comercio:
+        1. Permitir a los comercios ofrecer cuotas sin interés a sus clientes.
+        El objetivo es flexibilizar las opciones de pago que los comercios le ofrece a sus clientes finales,
+        con el objetivo de habilitar la venta por cuotas, sin la necesidad de tener que contar con un
+        convenio con algún emisor para ofrecer este beneficio.
+
+        2. Incrementar las ventas y el ticket promedio en los comercios.
+        Este mecanismo permite a los clientes del comercio segmentar el pago de algunos artículos en cuotas,
+        lo que puede incentivar la compra de productos de mayor valor o en mayor cantidad.
+        
+        3. Mejorar el posicionamiento frente a la competencia.
+        Es una necesidad para mantener la competitividad en el mercado, ya que muchos comercios ya ofrecen esta opción,
+        y no contar con ella puede resultar en la pérdida de clientes potenciales.
+
+
+        Principales métricas a impactar:
+        1. Cantidad de comercios
+        Fomentar a que más comercios contraten el producto de Cuota Comercio.
+
+        2. Completitiud de la información
+        Permitir a los comercios que cuenta con el producto acceder a información completa y oportuna sobre sus ventas en cuotas.
+
+        3. Robustez del sistema
+        Asegurar que la plataforma soporte el crecimiento en la cantidad de comercios y transacciones
+
+        4. Nivel de servicio
+        Minimizar las incidencias relacionadas con la operación del producto. Esto significa que el producto pueda operarar en
+        todo su ciclo de vida sin problemas que afecten la disponibilidad del servicio, impidan operar a los clientes, o generen
+        resultados confusos que no sean fáciles de entender para los comercios.
+        """
+
+        return info
+
+    

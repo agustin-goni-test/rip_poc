@@ -71,24 +71,6 @@ class BusinessInfo:
             filename += ".txt"
 
         return self._business_info_files[filename]
-    
-
-
-    # def get_business_info_from_jira(self, filename):
-
-    #     if not filename.endswith(".txt"):
-    #         epic_key = filename
-    #         filename += ".txt"
-
-    #     try:
-    #         # Obtener información de la epica
-    #         jira_client = JiraClient()
-    #         content = jira_client.get_epic_info(filename)
-    #         self._business_info_files[filename] = content
-    #         print(f"Información del negocio cargada desde la épica {epic_key}")
-
-    #     except Exception as e:
-    #         print(f"Error al intentar obtener información de negocio: {str(e)}")
             
         
 

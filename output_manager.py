@@ -192,6 +192,7 @@ class OutputRunnable(Runnable):
     def invoke(self, result, config=None):
 
         print(f"Generando salida para issue {result.issue_key}")
+        execution = os.getenv("EXECUTION", "asynch")
 
         # issue_key = config.get("issue_key") if config else "unknown"
         # issue_date = config.get("issue_date") if config else "01-01"
@@ -223,6 +224,8 @@ class OutputRunnable(Runnable):
         impact_list = self.output_manager.obtain_impact_list(result.impactos_globales)
 
         # Guardar impactos en gráficos
-        self.output_manager.create_visual_output(result.issue_key, impact_list)
+        # Esta línea sólo puede ejecutar en la versión síncrona
+        if execution == "synch":
+            self.output_manager.create_visual_output(result.issue_key, impact_list)
 
 

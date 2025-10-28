@@ -121,7 +121,9 @@ class JiraClient:
 
         # Agregar información de business info si existe
         business_info = BusinessInfo()
-        if epic_key:
+        if epic_key == "GOBI-895":
+            info = self.get_epic_info(epic_key)
+        else:
             info = business_info.get_business_info(f"{epic_key}")
 
 
@@ -134,6 +136,23 @@ class JiraClient:
             epic_key=epic_key,
             epic_summary=epic_summary
         )
+    
+
+    def get_epic_info(self, epic_key: str, filename: str = "GOBI-895") -> str:
+
+        try:
+            epic_issue = self.client.issue(epic_key)
+            filename = epic_key + ".txt"
+
+            for attachment in epic_issue.fields.attachment:
+                if filename.lower() in attachment.filename.lower():
+                    file_content = attachment.get()
+                    return file_content.decode('utf-8')
+                
+            return f"Archivo de información de negocio {filename} no encontrado"
+            
+        except Exception as e:
+            return f"Error al intentar obtener información de negocios para épica {epic_key}: {str(e)}"
         
 
 

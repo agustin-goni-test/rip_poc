@@ -22,30 +22,14 @@ FILTER_ID = os.getenv("JIRA_FILTER_ID")
 def main():
     print("Everything OK!")
 
-    # test_llm_client()
-
     # Leer filtro según el código pre definido
     filter = os.getenv("JIRA_FILTER_ID")
 
     # Buscar información de los issues del filtro
     issues_info = get_issue_list_info(filter)
 
-    # Usar la información de los issues para obtener detalles de cada caso
-    # for issue in issues_info:
-    #     # Obtener el valor del issue cerrado
-    #     valor = obtain_value_for_issue(issue)
-
-    #     # Guardar el valor por HU
-    #     save_issue_value(issue.key, valor)
-
-
+    # Generar la salida
     create_output_table(issues_info)
-
-    # # issue = issues_info[0]
-    # for issue in issues_info:
-    #     valor = obtener_valor_para_una_hu(issue, info)
-
-    #     guardar_valor_por_hu(issue.key, valor)
 
     print("Success!!")
 
@@ -68,6 +52,9 @@ def get_issue_list_info(filter) -> List[IssueInfo]:
 
 
 def get_business_info() -> str:
+    '''
+    Método para obtener la información de negocio relativa a una HU.
+    '''
     # Usar cliente de información del negocio (genérico)
     business_info = BusinessInfo()
 
@@ -78,9 +65,11 @@ def get_business_info() -> str:
     return info
 
 
+# Método "histórico". Ya no estamos usando llamadas directas a un cliente LLM
 def test_llm_client():
     '''
-    Método para probar hacer un completion genérico con un LLM'''
+    Método para probar hacer un completion genérico con un LLM
+    '''
 
     # Crear el cliente de LLM
     llm_client = LLMClient()
@@ -96,75 +85,21 @@ def test_llm_client():
     print(response)
 
 
-# def obtain_value_for_issue(issue: IssueInfo) -> str:
-#     '''
-#     Método para obtener el valor de una HU específica
-#     '''
-
-#     print(f"\nObteniendo valor de negocio para la HU {issue.key}, de GOBI {issue.epic_key}...")
-
-#     # Crear el cliente de LLM
-#     llm_client = LLMClient()
-
-#     # Obtener información para el prompt
-#     key = issue.key
-#     summary = issue.summary
-#     description = issue.description
-#     info = issue.business_info
-
-#     # Crear prompt que ponga en contexto el modelo
-#     prompt = f"""
-#     Tengo un issue de Jira ya cerrado con clave {key}, con título {summary} y con esta descripción: ''' {description} '''.
-#     Quiero extraer el valor de negocio asociado a la HU. Para eso, cuento con la siguiente descripción
-#     del valor de negocio de la inciativa en la que se encaja: ''' {info} '''. Para esto, recorre cada una
-#     de las métricas definidas en la información del negocio y explicar si la HU contribuye a mejorar esa métrica.
-#     Categoriza el impacto que pueda tener sobre cada métrica en "Alto", "Medio", "Bajo" o "Nulo", e indica 
-#     brevemente por qué. Finalmente, entrega un resumen del valor de negocio total que aporta la HU, donde indiques
-#     cuál de las métricas es la más impactada (sólo puede ser una de las que existan, la más relevante). Acá incluye
-#     solamente el nombre de la métrica y nada más.
-#     Entrega la respuesta la medición de impactos y las justificaciones en secciones "IMPACTOS" y "JUSTIFICACIONES", y "RESUMEN".
-#     Por lo tanto, la respuesta debe ordenarse así: 1) IDENTIFICACIÓN del issue (su key); 2) IMPACTOS; 3) JUSTIFICACIONES; 4)RESUMEN.
-#     Entrega una salida de texto plano, sin formatos.    
-#     """
-
-#     response = llm_client.generate_text(prompt)
-
-#     print(f"\n\nValor de negocio para la HU {key}:\n")
-#     print(response)
-
-#     return response
-
-
-# def save_issue_value(issue_key: str, valor: str) -> None:
-#     '''
-#     Método para guardar el valor de negocio de una HU en un archivo de texto
-#     '''
-
-#     print(f"\nGuardando valor de negocio para la HU {issue_key}...")
-
-#     # Crear el gestor de salida
-#     output_manager = OutputManager()
-
-#     # Guardar el valor en un archivo de texto
-#     output_manager.save_output_to_text(issue_key, valor)
-
-#     impact_list = output_manager.obtain_impact_list(valor)
-
-#     output_manager.create_visual_output(issue_key, impact_list)
-
-#     return None
-
 
 def create_output_table(issues: List[IssueInfo]) -> None:
+    '''
+    Método que hace el procesamiento de la información.
+    
+    Recibe una lista de información de issues. Genera la cadena de consulta y salida.'''
 
     # Obtener la instancia del OutputManager
     output_manager = OutputManager()
 
+    # Obtener parámetros de configuración
     model = os.getenv("LLM_MODEL", "deepseek-chat")
     api_key = os.getenv("LLM_API_KEY")
-    # api_key = "AIzaSyA2P24LFUoyF4yO4v92BHHvxwfSAdEzt1o"
-    api_base_url = os.getenv("LLM_API_BASE_URL")
 
+    # Crear prompt desde una plantilla. Parametrizado a variables
     prompt = ChatPromptTemplate.from_template("""
     Eres un asistente que resume información de issues de Jira para reportes de negocio.
 
@@ -184,19 +119,24 @@ def create_output_table(issues: List[IssueInfo]) -> None:
     """)
 
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
+        model=model,
         google_api_key=api_key,
         temperature=0
         )
     
+    # Crear LLM con salida estructurada. Este paso es crítico.
+    # Genera un RunnableBinding que hace un wrapper de LLM comportamiento adicional
+    # (en este caso, la capacidad de manejar salida estructurada)
     structured_llm = llm.with_structured_output(IssueAnalysis)
+
+    # La "cadena" de ejecución. De tipo RunnableSequence
     chain = prompt | structured_llm
 
-    # chain = llm.with_structured_output(IssueAnalysis, prompt=prompt)
-
+    # Iterar por cada HU encontrada
     for issue in issues:
         print(f"Procesando issue {issue.key} para tabla de salida...")
 
+        # Crear la estructura de entrada, con los parámetros que espera el prompt
         issue_data ={
             "key": issue.key,
             "summary": issue.summary,
@@ -205,9 +145,14 @@ def create_output_table(issues: List[IssueInfo]) -> None:
         }
 
         try:
+            # Invocar la cadena. Esto genera la ejecución del RunnableSequence. En este caso,
+            # el prompt que entra en el LLM con estructura
             result = chain.invoke(issue_data)
+            
+            # Generar salida especial para la fecha
             release_date = datetime.fromisoformat(issue.resolution_date.replace('Z', '+00:00')).strftime('%d-%m')
             
+            # Generar fila para guardar
             row = {
                 "HU": issue.key,
                 "GOBI": issue.epic_key,
@@ -239,73 +184,6 @@ def create_output_table(issues: List[IssueInfo]) -> None:
     
     output_manager.save_table_to_csv("output_table.csv")
 
-
-# def validate_summary(issue: IssueInfo) -> str:
-#     '''
-#     Método para asegurar que exista un resumen adecuado para el issue
-#     '''
-#     print(f"Elaborando resumen para el issue {issue.key}...")
-
-#     llm_client = LLMClient()
-
-#     original_summary = issue.summary
-#     description = issue.description
-
-#     prompt = f"""
-#     Considerando este resumen: {original_summary} y esta descripción: {description},
-#     entrega una descripción de máximo 10 palabras para explicar de que se trata el issue.
-#     """
-
-#     response = llm_client.generate_text(prompt)
-#     return response
-
-
-# def get_business_value(issue: IssueInfo, info: BusinessInfo) -> str:
-#     '''
-#     Método para obtener el valor de negocio resumido de una HU
-#     '''
-#     print(f"Obteniendo valor de negocio resumido para la HU {issue.key}...")
-
-#     # Obtener el cliente de LLM
-#     llm_client = LLMClient()
-
-#     summary = issue.summary
-#     description = issue.description
-
-#     prompt = f"""
-#     Considerando un issue con este resumen: ''' {summary} ''' esta descripción: ''' {description} ''', y
-#     teniendo como referencia este documento de valor de negocio: ''' {info} ''',
-#     quiero un resumen de no más de 25 palabras respecto a cuál es el valor de negocio que aporta esta HU.
-#     Para obtenerlo considera solamente la sección de los objetivos de la iniciativa, no las métricas.
-#     Evita mantener problemas gramaticales en la respuesta. Por ejemplo, si en el issue dice ''' Listado Comercios '''
-#     (con mayúsculas), escribe la respuesta con minúsculas: ''' listado comercios '''.
-#     """
-
-#     response = llm_client.generate_text(prompt)
-#     return response
-
-
-# def get_main_metric(issue: IssueInfo, info: BusinessInfo) -> str:
-#     '''
-#     Método para obtener la métrica más impactada por una HU
-#     '''
-#     print(f"Obteniendo métrica más impactada para la HU {issue.key}...")
-
-#     # Obtener el cliente de LLM
-#     llm_client = LLMClient()
-
-#     summary = issue.summary
-#     description = issue.description
-
-#     prompt = f"""
-#     Considerando un issue con este resumen: ''' {summary} ''' esta descripción: ''' {description} ''', y
-#     teniendo como referencia este documento de valor de negocio: ''' {info} ''',
-#     quiero que me indiques cuál es la métrica más impactada por esta HU.
-#     Responde solamente con el nombre de la métrica, sin explicaciones adicionales.
-#     """
-
-#     response = llm_client.generate_text(prompt)
-#     return response
 
 
 if __name__ == "__main__":

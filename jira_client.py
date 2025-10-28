@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from jira import JIRA
 from typing import List
 from business_info import BusinessInfo
+from pydantic import BaseModel, Field
 
 load_dotenv
 
@@ -28,6 +29,51 @@ class IssueInfo:
     def __repr__(self):
         return (f"IssueInfo(key={self.key}, summary={self.summary!r}, "
                 f"epic_key={self.epic_key}, resolved={self.resolution_date})")
+
+
+class IssueAnalysis(BaseModel):
+    resumen: str = Field(..., description="Descripción de máximo 10 palabras del issue")
+    valor_negocio: str = Field(..., description="Resumen de máximo 25 palabras del valor de negocio de la HU, considerando sólo objetivos de la iniciativa.")
+    metrica_impactada: str = Field(..., description="Nombre de la métrica principal impactada por la HU.")
+    impactos_globales: str = Field(..., description="Lista del nivel de impacto en todas las métricas")
+    justificaciones: str = Field(..., description="Justificaciones para los impactos de cada métrica")
+
+
+    def to_text_report(self, issue_key: str) -> str:
+        """
+        Crea una representación en texto plano y formateada de los resultados del análisis.
+
+        Args:
+            issue_key: La clave del issue (e.g., "PROJ-123") para incluir en el reporte.
+
+        Returns:
+            Una cadena de texto formateada para el reporte.
+        """
+        report = f"""
+        ==================================================
+                REPORTE DE ANÁLISIS DE ISSUE: {issue_key}
+        ==================================================
+
+        Resumen Breve:
+        {self.resumen}
+
+        Valor de Negocio:
+        {self.valor_negocio}
+
+        Métrica Principal Impactada:
+        {self.metrica_impactada}
+
+        --- Detalles del Impacto ---
+
+        Impactos Globales (Niveles):
+        {self.impactos_globales}
+
+        Justificaciones de Impacto:
+        {self.justificaciones}
+
+        ==================================================
+        """
+        return report.strip()
 
 
 class JiraClient:

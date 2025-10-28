@@ -116,24 +116,30 @@ class OutputManager:
 
 
     def obtain_impact_list(self, text: str) -> dict:
-        '''
-        Método para obtener una lista de impactos desde la respuesta del LLM
-        '''
+        """
+        Transforma la cadena de texto de impactos globales en un diccionario.
+        
+        El formato de entrada esperado es: 'Métrica 1: Valor A, Métrica 2: Valor B, ...'
+        Si el valor es 'Nulo', se reemplaza por 'Bajo' para el ejemplo.
+        
+        Args:
+            impactos_globales_str (str): La cadena de impacto recibida del LLM.
+            
+        Returns:
+            dict: Un diccionario con el formato {'Métrica': 'Valor'}.
+        """
 
-        impact_section = re.search(r"IMPACTOS\s*(.*?)\s*JUSTIFICACIONES", text, re.DOTALL)
-        
-        if not impact_section:
-            print("No se encontró la sección de IMPACTOS en la respuesta.")
-            return {}
-        
-        impacts_text = impact_section.group(1).strip()
         impacts_dict = {}
 
-        for line in impacts_text.splitlines():
-            line = line.strip()
-            if ":" in line:
-                metric, impact = line.split(":", 1)
-                impacts_dict[metric.strip()] = impact.strip()
+        # Separar la cadena por cada par
+        pairs = text.split(', ')
+
+        for pair in pairs:
+            if ":" in pair:
+                key, value = pair.split(': ', 1)
+                clean_value = value.strip()
+
+            impacts_dict[key.strip()] = clean_value
 
         return impacts_dict
 

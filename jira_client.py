@@ -121,10 +121,24 @@ class JiraClient:
 
         # Agregar información de business info si existe
         business_info = BusinessInfo()
-        if epic_key == "GOBI-895":
-            info = self.get_epic_info(epic_key)
-        else:
-            info = business_info.get_business_info(f"{epic_key}")
+        # if epic_key == "GOBI-895":
+        #     info = self.get_epic_info(epic_key)
+        # else:
+        #     info = business_info.get_business_info(f"{epic_key}")
+
+        # Si hay una épica asociada
+        if epic_key:
+
+            # Validar si ya fue leído si archivo
+            exists = business_info.epic_already_read(epic_key)
+            
+            # Si no ha sido leído
+            if not exists:
+                info = self.get_epic_info(epic_key)
+                business_info.add_epic_to_list(epic_key, info)
+
+            else:
+                info = business_info.get_epic_from_list(epic_key)
 
 
         return IssueInfo(
@@ -138,15 +152,22 @@ class JiraClient:
         )
     
 
-    def get_epic_info(self, epic_key: str, filename: str = "GOBI-895") -> str:
+    def get_epic_info(self, epic_key: str) -> str:
 
         try:
+            # Buscar la información de la épica
             epic_issue = self.client.issue(epic_key)
+
+            # Adjuntar extensión al nombre del archivo
             filename = epic_key + ".txt"
 
+            # Iterar en los adjuntos obtenidos de la épica
             for attachment in epic_issue.fields.attachment:
+
+                # Si el nombre del archivo buscado corresponde al attachment, leerlo
                 if filename.lower() in attachment.filename.lower():
                     file_content = attachment.get()
+                    print(f"Detalles de la iniciativa de negocios encontrados en {epic_key}")
                     return file_content.decode('utf-8')
                 
             return f"Archivo de información de negocio {filename} no encontrado"

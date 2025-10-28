@@ -104,7 +104,7 @@ def create_output_table(issues: List[IssueInfo]) -> None:
     output_runnable = OutputRunnable(output_manager)
 
     # Obtener parámetros de configuración
-    model = os.getenv("LLM_MODEL", "deepseek-chat")
+    model = os.getenv("LLM_MODEL", "gemini-2.5-flash")
     api_key = os.getenv("LLM_API_KEY")
 
     # Crear prompt desde una plantilla. Parametrizado a variables

@@ -40,6 +40,38 @@ class BusinessInfo:
                 self._business_info_files[filename] = ""
         
         return self._business_info_files[filename]
+    
+
+    def epic_already_read(self, epic_key: str) -> bool:
+        '''
+        Valida si ya fue leída la información de la épica.
+        '''
+        
+        # Nombre del archivo, validar si es txt
+        filename = epic_key
+        if not filename.endswith(".txt"):
+            filename += ".txt"
+
+        # Retorna verdadero si el archivo ya estaba cargado
+        return filename in self._business_info_files
+    
+
+    def add_epic_to_list(self, epic_key: str, content: str):
+
+        filename = epic_key
+        if not filename.endswith(".txt"):
+            filename += ".txt"
+
+        self._business_info_files[filename] = content
+
+    def get_epic_from_list(self, epic_key:str) -> str:
+
+        filename = epic_key
+        if not filename.endswith(".txt"):
+            filename += ".txt"
+
+        return self._business_info_files[filename]
+    
 
 
     # def get_business_info_from_jira(self, filename):

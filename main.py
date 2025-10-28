@@ -6,7 +6,7 @@ from jira_client import JiraClient, IssueInfo, IssueAnalysis
 from typing import List
 from llm_client import LLMClient
 from business_info import BusinessInfo
-from output_manager import OutputManager
+from output_manager import OutputManager, OutputRunnable
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel
@@ -22,6 +22,8 @@ FILTER_ID = os.getenv("JIRA_FILTER_ID")
 def main():
     print("Everything OK!")
 
+    start_time = datetime.now()
+
     # Leer filtro según el código pre definido
     filter = os.getenv("JIRA_FILTER_ID")
 
@@ -31,7 +33,11 @@ def main():
     # Generar la salida
     create_output_table(issues_info)
 
-    print("Success!!")
+    finish_time = datetime.now()
+
+    elapsed_time = (finish_time - start_time).total_seconds() / 60
+ 
+    print(f"Proceso terminado en {elapsed_time}")
 
 
 def get_issue_list_info(filter) -> List[IssueInfo]:
@@ -85,7 +91,6 @@ def test_llm_client():
     print(response)
 
 
-
 def create_output_table(issues: List[IssueInfo]) -> None:
     '''
     Método que hace el procesamiento de la información.
@@ -94,6 +99,9 @@ def create_output_table(issues: List[IssueInfo]) -> None:
 
     # Obtener la instancia del OutputManager
     output_manager = OutputManager()
+
+    # Crear el objeto de tipo OutputRunnable para la cadena
+    output_runnable = OutputRunnable(output_manager)
 
     # Obtener parámetros de configuración
     model = os.getenv("LLM_MODEL", "deepseek-chat")
@@ -105,6 +113,8 @@ def create_output_table(issues: List[IssueInfo]) -> None:
 
     Analiza los siguientes datos de un issue:
     - Clave del issue: {key}
+    - Épica del issue: {epic_key}
+    - Fecha de resolución: {resolution_date}                  
     - Resumen original: {summary}
     - Descripción: {description}
     - Documento de valor de negocio: {business_info}
@@ -115,7 +125,10 @@ def create_output_table(issues: List[IssueInfo]) -> None:
     2. "valor_negocio": resumen (máximo 25 palabras) del valor de negocio aportado por la HU, usando únicamente la sección de "objetivos de la iniciativa" del documento.
     3. "metrica_impactada": nombre de la métrica más impactada por la HU, sin explicaciones adicionales.
     4. "impactos_globales": el impacto que la HU tiene en todas las métricas definidas en la sección correspondiente, con nivel "Nulo", "Bajo", "Medio" o "Alto".
-    5. "justificaciones": la justificación para cada uno de los impactos del punto anterior, con nombre de métrica y justificación
+    5. "justificaciones": la justificación para cada uno de los impactos del punto anterior, con nombre de métrica y justificación.
+    6. "issue_key": la clave de identificación del issue de Jira (por ejemplo, "SVA-1000").
+    7. "epic_key": la clave de identificación de la épica a la que pertenece el issue (por ejemplo: GOBI-800).
+    8. "resolution_date": la fecha en la que se resolvió el issue, expresada en formato MM-DD
     """)
 
     llm = ChatGoogleGenerativeAI(
@@ -130,7 +143,7 @@ def create_output_table(issues: List[IssueInfo]) -> None:
     structured_llm = llm.with_structured_output(IssueAnalysis)
 
     # La "cadena" de ejecución. De tipo RunnableSequence
-    chain = prompt | structured_llm
+    chain = prompt | structured_llm | output_runnable
 
     # Iterar por cada HU encontrada
     for issue in issues:
@@ -139,6 +152,8 @@ def create_output_table(issues: List[IssueInfo]) -> None:
         # Crear la estructura de entrada, con los parámetros que espera el prompt
         issue_data ={
             "key": issue.key,
+            "epic_key": issue.epic_key,
+            "resolution_date": issue.resolution_date,
             "summary": issue.summary,
             "description": issue.description,
             "business_info": issue.business_info
@@ -148,34 +163,8 @@ def create_output_table(issues: List[IssueInfo]) -> None:
             # Invocar la cadena. Esto genera la ejecución del RunnableSequence. En este caso,
             # el prompt que entra en el LLM con estructura
             result = chain.invoke(issue_data)
-            
-            # Generar salida especial para la fecha
-            release_date = datetime.fromisoformat(issue.resolution_date.replace('Z', '+00:00')).strftime('%d-%m')
-            
-            # Generar fila para guardar
-            row = {
-                "HU": issue.key,
-                "GOBI": issue.epic_key,
-                "Descripción": result.resumen,
-                "Fecha de liberación": release_date,
-                "Valor de negocio": result.valor_negocio,
-                "Métrica impactada": result.metrica_impactada
-            }
-
-            # Agregar la fila a la tabla de salida
-            output_manager.add_record_to_table(row)
-
-            # Convertir la respuesta del LLM en reporte (para archivo de texto)
-            report = result.to_text_report(issue.key)
-
-            # Guardar archivo de texto
-            output_manager.save_output_to_text(issue.key, report)
-
-            # Generar lista de impactos con formato de dict
-            impact_list = output_manager.obtain_impact_list(result.impactos_globales)
-
-            # Guardar impactos en gráficos
-            output_manager.create_visual_output(issue.key, impact_list)
+            if result:
+                print(f"Completado el ciclo para HU: {issue.key}...")
 
 
         except Exception as e:
@@ -183,8 +172,6 @@ def create_output_table(issues: List[IssueInfo]) -> None:
             continue
     
     output_manager.save_table_to_csv("output_table.csv")
-
-
 
 if __name__ == "__main__":
     main()

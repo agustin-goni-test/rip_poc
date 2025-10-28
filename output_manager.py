@@ -4,6 +4,9 @@ import os
 import re
 import textwrap
 import pandas as pd
+from langchain_core.runnables import Runnable
+from jira_client import IssueAnalysis
+from datetime import datetime
 
 load_dotenv()
 
@@ -179,4 +182,47 @@ class OutputManager:
         self.data.to_csv(file_path, index=False, encoding='utf-8-sig')
 
         # Informar al usuario
-        print(f"Output table saved to {file_path}") 
+        print(f"Output table saved to {file_path}")
+
+
+class OutputRunnable(Runnable):
+    def __init__(self, output_manager):
+        self.output_manager = output_manager
+
+    def invoke(self, result, config=None):
+
+        print(f"Generando salida para issue {result.issue_key}")
+
+        # issue_key = config.get("issue_key") if config else "unknown"
+        # issue_date = config.get("issue_date") if config else "01-01"
+        # epic_key = config.get("epic_key") if config else "unknown"
+
+        # Generar salida especial para la fecha
+        # release_date = datetime.fromisoformat(issue_date.replace('Z', '+00:00')).strftime('%d-%m')
+            
+        # Generar fila para guardar
+        row = {
+            "HU": result.issue_key,
+            "GOBI": result.epic_key,
+            "Descripción": result.resumen,
+            "Fecha de liberación": result.resolution_date,
+            "Valor de negocio": result.valor_negocio,
+            "Métrica impactada": result.metrica_impactada
+        }
+
+        # Agregar la fila a la tabla de salida
+        self.output_manager.add_record_to_table(row)
+
+        # Convertir la respuesta del LLM en reporte (para archivo de texto)
+        report = result.to_text_report(result.issue_key)
+
+        # Guardar archivo de texto
+        self.output_manager.save_output_to_text(result.issue_key, report)
+
+        # Generar lista de impactos con formato de dict
+        impact_list = self.output_manager.obtain_impact_list(result.impactos_globales)
+
+        # Guardar impactos en gráficos
+        self.output_manager.create_visual_output(result.issue_key, impact_list)
+
+

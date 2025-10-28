@@ -32,6 +32,9 @@ class IssueInfo:
 
 
 class IssueAnalysis(BaseModel):
+    issue_key: str = Field(..., description="La clave del issue de Jira (e.g, SVA-1000)")
+    epic_key: str = Field(..., description="La clave de la épica del issue de Jira (e.g., GOBI-800)")
+    resolution_date: str = Field(..., description="La fecha de resolución del issue de Jira, expresado en formato MM-DD")
     resumen: str = Field(..., description="Descripción de máximo 10 palabras del issue")
     valor_negocio: str = Field(..., description="Resumen de máximo 25 palabras del valor de negocio de la HU, considerando sólo objetivos de la iniciativa.")
     metrica_impactada: str = Field(..., description="Nombre de la métrica principal impactada por la HU.")

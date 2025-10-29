@@ -137,13 +137,18 @@ class OutputManager:
         # Separar la cadena por cada par
         pairs = text.split(', ')
 
+        # Iterar la lista de pares
         for pair in pairs:
+            # Usar ":" como separador
             if ":" in pair:
+                # Obtener par de clave y valor
                 key, value = pair.split(': ', 1)
                 clean_value = value.strip()
 
+            # Agregar en forma de dict (clave, valor)
             impacts_dict[key.strip()] = clean_value
 
+        # Retornar colección
         return impacts_dict
 
 

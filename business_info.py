@@ -4,6 +4,7 @@ import os
 load_dotenv()
 
 class BusinessInfo:
+    # Colección que guarda los contextos de negocio ya leídos
     _business_info_files: dict = {}
     _info_folder: str
 
@@ -21,17 +22,28 @@ class BusinessInfo:
 
     def get_business_info(self, filename: str) -> str:
         '''
-        Método para obtener información del negocio desde un archivo
+        Método para obtener información del negocio desde un archivo.
+        En este versión está en desuso
         '''
-        
+
+        # Agregar extensión TXT al archivo
         if not filename.endswith(".txt"):
             filename += ".txt"
 
+        # Si el archivo no está codificado dentro de la colección de contextos
+        # (la colección es un par ordenado con nombre de archivo como clave y contenido
+        # de archivo como valor)
         if filename not in self._business_info_files:
+
+            # Obtener la ruta hacia el archivo
             file_path = os.path.join(self._info_folder, filename)
+
             try:
+                # Leer el archivo
                 with open(file_path, 'r', encoding='utf-8') as f:
                     content = f.read()
+
+                    # Agregar a la colección de contextos de la clase
                     self._business_info_files[filename] = content
                     print(f"Información del negocio cargada desde {file_path}")
             
@@ -58,22 +70,30 @@ class BusinessInfo:
 
     def add_epic_to_list(self, epic_key: str, content: str):
 
+        # Usar la clave de épica como nombre de archivo y validar que
+        # tiene extensión TXT
         filename = epic_key
         if not filename.endswith(".txt"):
             filename += ".txt"
 
+        # Agregar a la colección con par (llave, valor),
+        # donde llave = filename y valor = content
         self._business_info_files[filename] = content
 
     def get_epic_from_list(self, epic_key:str) -> str:
 
+        # Usar la clave de épica como nombre de archivo y validar que
+        # tiene extensión TXT
         filename = epic_key
         if not filename.endswith(".txt"):
             filename += ".txt"
 
+        # Agregar a la colección con par (llave, valor),
+        # donde llave = filename y valor = content
         return self._business_info_files[filename]
             
         
-
+    # Método en desuso
     def get_business_info_legacy(self) -> str:
         '''
         Método para obtener información del negocio

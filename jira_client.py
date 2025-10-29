@@ -95,23 +95,49 @@ class JiraClient:
         options = {"server": server}
         self.client = JIRA(options, basic_auth=(user, token))
 
+
     def get_issues_from_filter(self, filter_id):
+        '''Método para traer los issues contenidos en algún filtro, a través de la API de Jira.
+        '''
+        
         print(f"Fetching all issues from Jira filter {filter_id}")
+        
+        # Obtiene toda la información de los issues directo desde Jira
+        # Clase Issue de la librería de Jira
         issues = self.client.search_issues(f"filter={filter_id}", maxResults=False)
+        
+        # Informar y retonar issues
         print(f"Found {len(issues)} issues.")
         return issues
     
+    
     def proccess_issue_list_info(self, issues) -> List[IssueInfo]:
+        '''Método para obtener la información de cada HU dentro de una lista.
+        '''
+        
+        # Colección para información de HUs.
         info_collection = []
+
+        # Por cada HU dentro de la lista original
         for issue in issues:
+
+            # Leer información de la HU desde la API de Jira
             issue_info = self._get_issue_info(issue)
+
+            # Agregar a la colección
             info_collection.append(issue_info)
 
+        # Retornar la colección
         return info_collection
-
-
     
+
     def _get_issue_info(self, issue) -> IssueInfo:
+        '''
+        Método para obtener la información de un issue a través de la API de Jira
+        
+        Recibe el issue desde la clase de la librería de Jira y lo transforma en la estructura
+        de IssueInfo, que es la que contiene lo necesario para este análisis.'''
+
         issue_key = issue.key
         summary = issue.fields.summary
         description = issue.fields.description
@@ -120,11 +146,8 @@ class JiraClient:
         epic_summary = None
 
         # Agregar información de business info si existe
+        # En esta versión, busca directo en la épica
         business_info = BusinessInfo()
-        # if epic_key == "GOBI-895":
-        #     info = self.get_epic_info(epic_key)
-        # else:
-        #     info = business_info.get_business_info(f"{epic_key}")
 
         # Si hay una épica asociada
         if epic_key:
@@ -134,13 +157,18 @@ class JiraClient:
             
             # Si no ha sido leído
             if not exists:
+                # Leer el archivo desde Jira y asignar a la info de negocios
                 info = self.get_epic_info(epic_key)
+                
+                # Agregar a la lista de contextos de negocios ya encontrados, para no tener
+                # que hacer la consulta de nuevo si aparece otra HU relacionada
                 business_info.add_epic_to_list(epic_key, info)
 
             else:
+                # Obtener del contexto ya cargado para esta épica
                 info = business_info.get_epic_from_list(epic_key)
 
-
+        # Retornar la clase con todos los detalles, incluyendo el contexto de negocios
         return IssueInfo(
             key=issue_key,
             summary=summary,

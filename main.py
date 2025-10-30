@@ -149,7 +149,16 @@ async def create_output_table_async(issues: List[IssueInfo]) -> None:
     structured_llm = llm.with_structured_output(IssueAnalysis)
 
     # La "cadena" de ejecución. De tipo RunnableSequence
+<<<<<<< Updated upstream
     chain = prompt | structured_llm | output_runnable
+=======
+    if not RATE_LIMITING:
+        chain = prompt | structured_llm | output_runnable
+    else:
+        # Incorpora el limitador para esperar por cada llamada
+        print("Usaremos un limitador de llamadas para no exceder la tasa permitida...")
+        chain = prompt | RateLimitingRunnable() | structured_llm | output_runnable
+>>>>>>> Stashed changes
 
     # Introduciremos ejecución asincrónica
     inputs = [
